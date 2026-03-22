@@ -1,0 +1,882 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Digital Product Factory — Victory Hour</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root {
+  --black: #06090f;
+  --navy: #0B1D3A;
+  --gold: #C9A84C;
+  --gold-light: #e8c96b;
+  --gold-pale: rgba(201,168,76,0.12);
+  --cream: #f0e6cc;
+  --border: rgba(201,168,76,0.18);
+  --border-strong: rgba(201,168,76,0.35);
+  --text-muted: rgba(240,230,204,0.5);
+  --text-dim: rgba(240,230,204,0.3);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background: var(--black);
+  color: var(--cream);
+  font-family: 'Crimson Pro', Georgia, serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+body::after {
+  content:'';
+  position:fixed; inset:0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events:none; z-index:9999; opacity:0.4;
+}
+.app-header {
+  border-bottom: 1px solid var(--border);
+  padding: 20px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky; top:0;
+  background: rgba(6,9,15,0.95);
+  backdrop-filter: blur(12px);
+  z-index: 100;
+}
+.logo { font-family:'Cinzel',serif; font-size:0.7rem; letter-spacing:0.25em; color:var(--gold); text-transform:uppercase; }
+.logo span { color:var(--text-muted); }
+.header-title { font-family:'Cinzel',serif; font-size:0.85rem; font-weight:600; letter-spacing:0.12em; color:var(--cream); }
+.station-nav { display:flex; gap:6px; align-items:center; }
+.nav-dot { width:8px; height:8px; border-radius:50%; border:1px solid var(--border); background:transparent; transition:all 0.3s; cursor:default; }
+.nav-dot.active { background:var(--gold); border-color:var(--gold); box-shadow:0 0 8px rgba(201,168,76,0.5); }
+.nav-dot.done { background:rgba(201,168,76,0.35); border-color:var(--gold); }
+.nav-sep { width:16px; height:1px; background:var(--border); }
+
+.factory { max-width: 860px; margin: 0 auto; padding: 48px 24px 80px; }
+
+.station { display:none; animation: stationIn 0.4s ease both; }
+.station.active { display:block; }
+@keyframes stationIn { from{opacity:0;transform:translateY(16px);} to{opacity:1;transform:translateY(0);} }
+
+.station-label { font-family:'Cinzel',serif; font-size:0.6rem; letter-spacing:0.3em; color:var(--gold); text-transform:uppercase; margin-bottom:10px; opacity:0.7; }
+.station-heading { font-family:'Cinzel',serif; font-size:clamp(1.6rem,4vw,2.4rem); font-weight:900; color:var(--cream); line-height:1.1; margin-bottom:10px; }
+.station-heading em { font-style:normal; color:var(--gold); }
+.station-sub { font-size:1.05rem; font-weight:300; color:var(--text-muted); line-height:1.65; margin-bottom:36px; max-width:580px; }
+
+.field-group { margin-bottom:24px; }
+.field-label { font-family:'Cinzel',serif; font-size:0.6rem; letter-spacing:0.2em; color:var(--text-muted); text-transform:uppercase; margin-bottom:10px; display:block; }
+textarea, input[type=text] {
+  width:100%; background:rgba(11,29,58,0.5); border:1px solid var(--border); border-radius:3px;
+  padding:14px 16px; color:var(--cream); font-family:'Crimson Pro',serif; font-size:1rem;
+  font-weight:300; line-height:1.6; resize:vertical; transition:border-color 0.2s, box-shadow 0.2s; outline:none;
+}
+textarea:focus, input[type=text]:focus { border-color:var(--border-strong); box-shadow:0 0 0 3px rgba(201,168,76,0.06); }
+textarea { min-height:90px; }
+
+.btn-primary {
+  font-family:'Cinzel',serif; font-size:0.72rem; letter-spacing:0.18em; text-transform:uppercase;
+  padding:14px 32px; background:linear-gradient(135deg,var(--gold) 0%,var(--gold-light) 100%);
+  color:var(--black); border:none; border-radius:3px; cursor:pointer; font-weight:600;
+  transition:all 0.25s;
+}
+.btn-primary:hover { transform:translateY(-2px); box-shadow:0 8px 30px rgba(201,168,76,0.3); }
+.btn-primary:disabled { opacity:0.4; cursor:not-allowed; transform:none; box-shadow:none; }
+.btn-secondary {
+  font-family:'Cinzel',serif; font-size:0.65rem; letter-spacing:0.15em; text-transform:uppercase;
+  padding:12px 24px; background:transparent; color:var(--text-muted); border:1px solid var(--border);
+  border-radius:3px; cursor:pointer; transition:all 0.2s;
+}
+.btn-secondary:hover { border-color:var(--border-strong); color:var(--cream); }
+.btn-row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:8px; }
+
+.loading-block { display:none; align-items:center; gap:14px; padding:20px 0; }
+.loading-block.show { display:flex; }
+.spinner { width:20px; height:20px; border:2px solid var(--border); border-top-color:var(--gold); border-radius:50%; animation:spin 0.8s linear infinite; flex-shrink:0; }
+@keyframes spin { to{transform:rotate(360deg);} }
+.loading-text { font-family:'Crimson Pro',serif; font-style:italic; font-size:0.95rem; color:var(--text-muted); }
+
+.result-section { display:none; margin-top:32px; }
+.result-section.show { display:block; }
+
+.result-divider { display:flex; align-items:center; gap:16px; margin-bottom:28px; }
+.result-divider-line { flex:1; height:1px; background:var(--border); }
+.result-divider-text { font-family:'Cinzel',serif; font-size:0.58rem; letter-spacing:0.2em; color:var(--gold); text-transform:uppercase; white-space:nowrap; }
+
+/* Niche cards */
+.niche-cards { display:grid; grid-template-columns:1fr; gap:16px; }
+.niche-card { border:1px solid var(--border); border-radius:4px; padding:24px; background:linear-gradient(145deg,rgba(11,29,58,0.6),rgba(6,9,15,0.8)); cursor:pointer; transition:all 0.25s; position:relative; }
+.niche-card:hover { border-color:var(--border-strong); transform:translateX(4px); }
+.niche-card.selected { border-color:var(--gold); background:linear-gradient(145deg,rgba(11,29,58,0.8),rgba(6,9,15,0.95)); box-shadow:0 0 30px rgba(201,168,76,0.08); }
+.niche-card.selected::before { content:'✦ SELECTED'; position:absolute; top:16px; right:16px; font-family:'Cinzel',serif; font-size:0.5rem; letter-spacing:0.2em; color:var(--gold); }
+.niche-rank { font-family:'Cinzel',serif; font-size:0.58rem; letter-spacing:0.2em; color:var(--gold); opacity:0.6; margin-bottom:8px; }
+.niche-title { font-family:'Cinzel',serif; font-size:1rem; font-weight:600; color:var(--cream); margin-bottom:8px; }
+.niche-type-badge { display:inline-block; font-family:'Cinzel',serif; font-size:0.52rem; letter-spacing:0.15em; padding:3px 10px; background:rgba(201,168,76,0.1); border:1px solid rgba(201,168,76,0.2); border-radius:2px; color:var(--gold); margin-bottom:10px; }
+.niche-desc { font-size:0.92rem; font-weight:300; color:var(--text-muted); line-height:1.6; margin-bottom:12px; }
+.niche-meta { display:flex; gap:20px; flex-wrap:wrap; }
+.niche-meta-item { font-family:'JetBrains Mono',monospace; font-size:0.7rem; color:var(--text-dim); }
+.niche-meta-item strong { color:var(--gold); font-weight:400; }
+
+/* Outline */
+.outline-box { background:rgba(11,29,58,0.4); border:1px solid var(--border); border-radius:4px; padding:28px; }
+.outline-product-title { font-family:'Cinzel',serif; font-size:1.2rem; font-weight:600; color:var(--gold); margin-bottom:6px; }
+.outline-subtitle { font-size:1rem; font-weight:300; font-style:italic; color:var(--text-muted); margin-bottom:20px; }
+.outline-chapters { list-style:none; }
+.outline-chapters li { padding:10px 0; border-bottom:1px solid rgba(201,168,76,0.08); font-size:0.95rem; color:rgba(240,230,204,0.75); display:flex; gap:12px; align-items:baseline; }
+.outline-chapters li:last-child { border-bottom:none; }
+.ch-num { font-family:'JetBrains Mono',monospace; font-size:0.65rem; color:var(--gold); opacity:0.6; flex-shrink:0; min-width:28px; }
+.outline-hook { margin-top:20px; padding:16px; background:rgba(201,168,76,0.05); border-left:2px solid var(--gold); font-style:italic; font-size:0.92rem; color:var(--text-muted); }
+
+/* Content viewer */
+.content-viewer { background:rgba(11,29,58,0.35); border:1px solid var(--border); border-radius:4px; overflow:hidden; }
+.content-viewer-header { background:rgba(11,29,58,0.6); border-bottom:1px solid var(--border); padding:12px 20px; display:flex; align-items:center; justify-content:space-between; }
+.content-viewer-title { font-family:'Cinzel',serif; font-size:0.6rem; letter-spacing:0.2em; color:var(--text-muted); text-transform:uppercase; }
+.copy-btn { font-family:'Cinzel',serif; font-size:0.55rem; letter-spacing:0.15em; text-transform:uppercase; padding:5px 12px; background:transparent; color:var(--gold); border:1px solid var(--border); border-radius:2px; cursor:pointer; transition:all 0.2s; }
+.copy-btn:hover { background:var(--gold-pale); }
+.content-body { padding:28px; font-size:0.95rem; font-weight:300; line-height:1.8; color:rgba(240,230,204,0.8); white-space:pre-wrap; max-height:480px; overflow-y:auto; }
+.content-body::-webkit-scrollbar { width:4px; }
+.content-body::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+
+/* Listing */
+.listing-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+@media(max-width:600px){ .listing-grid { grid-template-columns:1fr; } }
+.listing-block { background:rgba(11,29,58,0.4); border:1px solid var(--border); border-radius:4px; padding:20px; }
+.listing-block.full { grid-column:1/-1; }
+.listing-block-label { font-family:'Cinzel',serif; font-size:0.55rem; letter-spacing:0.2em; color:var(--gold); text-transform:uppercase; margin-bottom:10px; opacity:0.7; }
+.listing-block-value { font-size:0.95rem; font-weight:300; line-height:1.65; color:rgba(240,230,204,0.8); white-space:pre-wrap; }
+.listing-title-value { font-family:'Cinzel',serif; font-size:1.05rem; color:var(--cream); line-height:1.4; }
+.price-value { font-family:'Cinzel',serif; font-size:2rem; font-weight:900; color:var(--gold); }
+.tags-list { display:flex; flex-wrap:wrap; gap:7px; margin-top:4px; }
+.tag-pill { font-family:'JetBrains Mono',monospace; font-size:0.65rem; padding:4px 10px; background:rgba(201,168,76,0.08); border:1px solid rgba(201,168,76,0.15); border-radius:2px; color:rgba(201,168,76,0.7); }
+
+/* ── STATION 5 — PDF Preview ── */
+.pdf-options { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:28px; }
+@media(max-width:560px){ .pdf-options { grid-template-columns:1fr; } }
+.pdf-option-card {
+  border:1px solid var(--border); border-radius:4px; padding:20px; cursor:pointer;
+  transition:all 0.25s; background:rgba(11,29,58,0.4);
+}
+.pdf-option-card:hover { border-color:var(--border-strong); }
+.pdf-option-card.selected { border-color:var(--gold); background:rgba(11,29,58,0.7); }
+.pdf-option-card.selected::after { content:'✦'; float:right; color:var(--gold); font-size:0.8rem; }
+.pdf-opt-title { font-family:'Cinzel',serif; font-size:0.85rem; font-weight:600; color:var(--cream); margin-bottom:6px; }
+.pdf-opt-desc { font-size:0.85rem; font-weight:300; color:var(--text-muted); line-height:1.5; }
+
+.pdf-preview-wrap {
+  background:rgba(11,29,58,0.3);
+  border:1px solid var(--border);
+  border-radius:4px;
+  padding:28px;
+  margin-bottom:24px;
+}
+.pdf-preview-title {
+  font-family:'Cinzel',serif; font-size:0.6rem; letter-spacing:0.2em;
+  color:var(--gold); text-transform:uppercase; margin-bottom:16px; opacity:0.7;
+}
+.pdf-meta-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px; }
+.pdf-meta-item { }
+.pdf-meta-label { font-family:'JetBrains Mono',monospace; font-size:0.62rem; color:var(--text-dim); margin-bottom:3px; }
+.pdf-meta-value { font-size:0.9rem; color:rgba(240,230,204,0.75); }
+
+.download-btn {
+  font-family:'Cinzel',serif; font-size:0.75rem; letter-spacing:0.18em; text-transform:uppercase;
+  padding:16px 40px;
+  background:linear-gradient(135deg,var(--gold) 0%,var(--gold-light) 100%);
+  color:var(--black); border:none; border-radius:3px; cursor:pointer; font-weight:900;
+  transition:all 0.25s; display:inline-flex; align-items:center; gap:10px;
+}
+.download-btn:hover { transform:translateY(-3px); box-shadow:0 12px 40px rgba(201,168,76,0.4); }
+.download-btn:disabled { opacity:0.4; cursor:not-allowed; transform:none; box-shadow:none; }
+.download-icon { font-size:1rem; }
+
+.success-banner {
+  display:none;
+  background:rgba(111,207,151,0.08);
+  border:1px solid rgba(111,207,151,0.25);
+  border-radius:4px;
+  padding:16px 20px;
+  margin-top:16px;
+  font-size:0.95rem;
+  color:#a8ddb5;
+  font-weight:300;
+}
+.success-banner.show { display:block; }
+
+/* Progress */
+.factory-progress { height:2px; background:rgba(201,168,76,0.08); margin-bottom:48px; border-radius:1px; overflow:hidden; }
+.factory-progress-fill { height:100%; background:linear-gradient(90deg,var(--gold),var(--gold-light)); border-radius:1px; transition:width 0.5s ease; }
+
+.error-box { display:none; background:rgba(235,87,87,0.08); border:1px solid rgba(235,87,87,0.25); border-radius:4px; padding:16px 20px; margin-top:16px; font-size:0.9rem; color:#ffaaaa; font-weight:300; }
+.error-box.show { display:block; }
+
+.toast { position:fixed; bottom:32px; left:50%; transform:translateX(-50%) translateY(20px); background:rgba(6,9,15,0.95); border:1px solid var(--border-strong); border-radius:4px; padding:12px 24px; font-family:'Cinzel',serif; font-size:0.65rem; letter-spacing:0.15em; color:var(--gold); text-transform:uppercase; opacity:0; transition:all 0.3s; z-index:9998; pointer-events:none; backdrop-filter:blur(10px); }
+.toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="logo">Victory Hour <span>·</span> Multimedia</div>
+  <div class="header-title">Digital Product Factory</div>
+  <div class="station-nav">
+    <div class="nav-dot active" id="dot-1" title="Niche Finder"></div>
+    <div class="nav-sep"></div>
+    <div class="nav-dot" id="dot-2" title="Product Architect"></div>
+    <div class="nav-sep"></div>
+    <div class="nav-dot" id="dot-3" title="Content Generator"></div>
+    <div class="nav-sep"></div>
+    <div class="nav-dot" id="dot-4" title="Etsy Listing"></div>
+    <div class="nav-sep"></div>
+    <div class="nav-dot" id="dot-5" title="PDF Export"></div>
+  </div>
+</header>
+
+<div class="factory">
+  <div class="factory-progress">
+    <div class="factory-progress-fill" id="progress-fill" style="width:20%"></div>
+  </div>
+
+  <!-- ══ STATION 1 ══ -->
+  <div class="station active" id="station-1">
+    <div class="station-label">Station 01 of 05</div>
+    <h2 class="station-heading">Niche & <em>Angle Finder</em></h2>
+    <p class="station-sub">Enter a broad topic. The AI returns 3 product angles ranked by Etsy revenue potential — with format, price range, and demand data for each.</p>
+    <div class="field-group">
+      <label class="field-label">Topic or niche area</label>
+      <input type="text" id="niche-input" placeholder="e.g. manufacturing supervision, Quran study, side hustle finance, parenting toddlers…" />
+    </div>
+    <div class="field-group">
+      <label class="field-label">Target buyer (optional)</label>
+      <input type="text" id="buyer-input" placeholder="e.g. first-time managers, Muslim mothers, Etsy sellers…" />
+    </div>
+    <div class="btn-row">
+      <button class="btn-primary" id="btn-find-niches">Find Winning Angles →</button>
+    </div>
+    <div class="loading-block" id="load-1"><div class="spinner"></div><span class="loading-text">Researching buyer pain points and ranking angles…</span></div>
+    <div class="error-box" id="err-1"></div>
+    <div class="result-section" id="result-1">
+      <div class="result-divider"><div class="result-divider-line"></div><div class="result-divider-text">3 Winning Angles — Pick One</div><div class="result-divider-line"></div></div>
+      <div class="niche-cards" id="niche-cards-container"></div>
+      <div class="btn-row" style="margin-top:28px;">
+        <button class="btn-primary" id="btn-to-station2" disabled>Architect This Product →</button>
+        <button class="btn-secondary" id="btn-regen-niches">Regenerate</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ STATION 2 ══ -->
+  <div class="station" id="station-2">
+    <div class="station-label">Station 02 of 05</div>
+    <h2 class="station-heading">Product <em>Architect</em></h2>
+    <p class="station-sub">The AI builds a complete product blueprint — title, subtitle, chapter structure, key takeaways, and a buyer hook.</p>
+    <div class="field-group">
+      <label class="field-label">Refinement notes (optional)</label>
+      <textarea id="arch-notes" placeholder="e.g. Keep it practical with worksheets, add Islamic perspective, make it beginner-friendly…"></textarea>
+    </div>
+    <div class="btn-row">
+      <button class="btn-primary" id="btn-architect">Build Blueprint →</button>
+      <button class="btn-secondary" id="btn-back-1">← Back</button>
+    </div>
+    <div class="loading-block" id="load-2"><div class="spinner"></div><span class="loading-text">Architecting your product structure…</span></div>
+    <div class="error-box" id="err-2"></div>
+    <div class="result-section" id="result-2">
+      <div class="result-divider"><div class="result-divider-line"></div><div class="result-divider-text">Product Blueprint</div><div class="result-divider-line"></div></div>
+      <div class="outline-box" id="outline-box"></div>
+      <div class="btn-row" style="margin-top:24px;">
+        <button class="btn-primary" id="btn-to-station3">Generate Content →</button>
+        <button class="btn-secondary" id="btn-regen-arch">Rebuild Blueprint</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ STATION 3 ══ -->
+  <div class="station" id="station-3">
+    <div class="station-label">Station 03 of 05</div>
+    <h2 class="station-heading">Content <em>Generator</em></h2>
+    <p class="station-sub">Full product content — introduction, all sections with key takeaways, and a closing CTA. Copy-paste ready.</p>
+    <div class="field-group">
+      <label class="field-label">Tone & style notes (optional)</label>
+      <textarea id="tone-notes" placeholder="e.g. conversational but authoritative, include real examples, short sentences…"></textarea>
+    </div>
+    <div class="btn-row">
+      <button class="btn-primary" id="btn-generate-content">Write Full Content →</button>
+      <button class="btn-secondary" id="btn-back-2">← Back</button>
+    </div>
+    <div class="loading-block" id="load-3"><div class="spinner"></div><span class="loading-text">Writing your complete product content… 30–60 seconds.</span></div>
+    <div class="error-box" id="err-3"></div>
+    <div class="result-section" id="result-3">
+      <div class="result-divider"><div class="result-divider-line"></div><div class="result-divider-text">Complete Product Content</div><div class="result-divider-line"></div></div>
+      <div class="content-viewer">
+        <div class="content-viewer-header">
+          <span class="content-viewer-title">Product Content — Ready to Format</span>
+          <button class="copy-btn" id="copy-content">Copy All</button>
+        </div>
+        <div class="content-body" id="content-body"></div>
+      </div>
+      <div class="btn-row" style="margin-top:24px;">
+        <button class="btn-primary" id="btn-to-station4">Generate Etsy Listing →</button>
+        <button class="btn-secondary" id="btn-regen-content">Rewrite Content</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ STATION 4 ══ -->
+  <div class="station" id="station-4">
+    <div class="station-label">Station 04 of 05</div>
+    <h2 class="station-heading">Etsy <em>Listing</em></h2>
+    <p class="station-sub">SEO-optimized title, full description, 13 tags, price recommendation, and a social hook. Ready to paste directly into your shop.</p>
+    <div class="field-group">
+      <label class="field-label">Additional listing notes (optional)</label>
+      <textarea id="listing-notes" placeholder="e.g. mention Canva template included, emphasize instant download…"></textarea>
+    </div>
+    <div class="btn-row">
+      <button class="btn-primary" id="btn-gen-listing">Generate Etsy Listing →</button>
+      <button class="btn-secondary" id="btn-back-3">← Back</button>
+    </div>
+    <div class="loading-block" id="load-4"><div class="spinner"></div><span class="loading-text">Crafting your Etsy listing with SEO keywords…</span></div>
+    <div class="error-box" id="err-4"></div>
+    <div class="result-section" id="result-4">
+      <div class="result-divider"><div class="result-divider-line"></div><div class="result-divider-text">Your Etsy Listing — Ready to Publish</div><div class="result-divider-line"></div></div>
+      <div class="listing-grid" id="listing-grid"></div>
+      <div class="btn-row" style="margin-top:28px;">
+        <button class="btn-primary" id="btn-to-station5">Export PDF →</button>
+        <button class="btn-secondary" id="btn-copy-all-listing">Copy Full Listing</button>
+        <button class="btn-secondary" id="btn-regen-listing">Regenerate</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ STATION 5 — PDF EXPORT ══ -->
+  <div class="station" id="station-5">
+    <div class="station-label">Station 05 of 05</div>
+    <h2 class="station-heading">PDF <em>Export</em></h2>
+    <p class="station-sub">Choose your layout style and download a professionally formatted, branded PDF — ready to upload to Etsy as your digital product file.</p>
+
+    <div class="field-group">
+      <label class="field-label">Author name (appears on cover)</label>
+      <input type="text" id="author-name" placeholder="e.g. Moe Elahresh / Victory Hour Multimedia" />
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Choose PDF style</label>
+      <div class="pdf-options">
+        <div class="pdf-option-card selected" data-style="dark" onclick="selectPDFStyle(this,'dark')">
+          <div class="pdf-opt-title">◆ Dark Executive</div>
+          <div class="pdf-opt-desc">Navy & gold. Premium, authority feel. Best for business, leadership, productivity guides.</div>
+        </div>
+        <div class="pdf-option-card" data-style="light" onclick="selectPDFStyle(this,'light')">
+          <div class="pdf-opt-title">◇ Clean Light</div>
+          <div class="pdf-opt-desc">White with gold accents. Minimal, readable. Best for journals, planners, wellness guides.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pdf-preview-wrap">
+      <div class="pdf-preview-title">Export Preview</div>
+      <div class="pdf-meta-grid" id="pdf-meta-grid">
+        <div class="pdf-meta-item"><div class="pdf-meta-label">PRODUCT TITLE</div><div class="pdf-meta-value" id="prev-title">—</div></div>
+        <div class="pdf-meta-item"><div class="pdf-meta-label">FORMAT</div><div class="pdf-meta-value" id="prev-format">—</div></div>
+        <div class="pdf-meta-item"><div class="pdf-meta-label">SECTIONS</div><div class="pdf-meta-value" id="prev-sections">—</div></div>
+        <div class="pdf-meta-item"><div class="pdf-meta-label">EST. PAGES</div><div class="pdf-meta-value" id="prev-pages">—</div></div>
+      </div>
+      <div style="height:1px;background:var(--border);margin-bottom:20px;"></div>
+      <div style="font-size:0.85rem;font-weight:300;color:var(--text-dim);font-style:italic;">
+        Includes: cover page · table of contents · all sections with headings · key takeaways · Victory Hour branding · footer on every page
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="download-btn" id="btn-download-pdf">
+        <span class="download-icon">⬇</span> Download PDF
+      </button>
+      <button class="btn-secondary" id="btn-back-4">← Back</button>
+    </div>
+    <div class="success-banner" id="success-banner">
+      ✦ PDF downloaded successfully. Upload it to Etsy as your digital product file. You're ready to list.
+    </div>
+    <div class="error-box" id="err-5"></div>
+
+    <div class="btn-row" style="margin-top:32px; padding-top:32px; border-top:1px solid var(--border);">
+      <button class="btn-primary" id="btn-start-over">🏭 Build Another Product</button>
+    </div>
+  </div>
+
+</div><!-- /factory -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+const { jsPDF } = window.jspdf;
+
+// ─── State ────────────────────────────────────────────────
+const state = {
+  niche:'', buyer:'', selectedAngle:null, angles:[],
+  outline:null, content:'', listing:null,
+  pdfStyle:'dark'
+};
+
+// ─── Utils ────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2400);
+}
+function setLoading(n,show){ document.getElementById(`load-${n}`).classList.toggle('show',show); }
+function showResult(n){ document.getElementById(`result-${n}`).classList.add('show'); }
+function hideResult(n){ document.getElementById(`result-${n}`).classList.remove('show'); }
+function showError(n,msg){ const e=document.getElementById(`err-${n}`); e.textContent='⚠ '+msg; e.classList.add('show'); }
+function hideError(n){ document.getElementById(`err-${n}`).classList.remove('show'); }
+
+function goToStation(n) {
+  document.querySelectorAll('.station').forEach(s=>s.classList.remove('active'));
+  document.getElementById(`station-${n}`).classList.add('active');
+  [1,2,3,4,5].forEach(i=>{
+    const d=document.getElementById(`dot-${i}`);
+    d.classList.remove('active','done');
+    if(i<n) d.classList.add('done');
+    if(i===n) d.classList.add('active');
+  });
+  document.getElementById('progress-fill').style.width=(n/5*100)+'%';
+  window.scrollTo({top:0,behavior:'smooth'});
+  if(n===5) populatePDFPreview();
+}
+
+async function callClaude(prompt, systemPrompt) {
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      model:'claude-sonnet-4-20250514', max_tokens:1000,
+      system:systemPrompt,
+      messages:[{role:'user',content:prompt}]
+    })
+  });
+  if(!resp.ok) throw new Error(`API error ${resp.status}`);
+  const data = await resp.json();
+  return data.content.map(b=>b.text||'').join('');
+}
+
+function safeJSON(text) {
+  try { return JSON.parse(text.replace(/```json|```/g,'').trim()); }
+  catch(e) { throw new Error('Could not parse AI response. Please try again.'); }
+}
+
+// ─── STATION 1 ────────────────────────────────────────────
+async function findNiches() {
+  const niche=document.getElementById('niche-input').value.trim();
+  const buyer=document.getElementById('buyer-input').value.trim();
+  if(!niche){showToast('Enter a topic first');return;}
+  state.niche=niche; state.buyer=buyer; state.selectedAngle=null;
+  hideError(1); hideResult(1);
+  setLoading(1,true);
+  document.getElementById('btn-find-niches').disabled=true;
+  try {
+    const raw = await callClaude(
+      `Research this niche and return 3 winning product angles ranked by Etsy revenue potential.\nNiche: ${niche}\nTarget buyer: ${buyer||'general audience'}\n\nReturn ONLY this JSON (no markdown):\n{"angles":[{"rank":1,"title":"Short product concept title","type":"PDF Guide|Mini eBook|Template Pack|Workbook|Checklist|Planner|Toolkit|Swipe File","desc":"2 sentences on buyer pain point this solves and why it sells","priceRange":"$7–$17","competitionLevel":"Low|Medium|High","demandLevel":"Low|Medium|High|Very High"}]}`,
+      `You are a digital product strategist specializing in Etsy bestsellers. Return ONLY valid JSON, no markdown, no preamble.`
+    );
+    const parsed=safeJSON(raw);
+    state.angles=parsed.angles;
+    renderNicheCards(parsed.angles);
+    showResult(1);
+  } catch(e){ showError(1,e.message); }
+  finally{ setLoading(1,false); document.getElementById('btn-find-niches').disabled=false; }
+}
+
+function renderNicheCards(angles) {
+  const c=document.getElementById('niche-cards-container'); c.innerHTML='';
+  angles.forEach((a,i)=>{
+    const card=document.createElement('div');
+    card.className='niche-card'; card.dataset.idx=i;
+    card.innerHTML=`<div class="niche-rank">Rank #${a.rank} · Revenue Potential</div><div class="niche-title">${a.title}</div><div class="niche-type-badge">${a.type}</div><div class="niche-desc">${a.desc}</div><div class="niche-meta"><span class="niche-meta-item">Price <strong>${a.priceRange}</strong></span><span class="niche-meta-item">Competition <strong>${a.competitionLevel}</strong></span><span class="niche-meta-item">Demand <strong>${a.demandLevel}</strong></span></div>`;
+    card.addEventListener('click',()=>{
+      document.querySelectorAll('.niche-card').forEach(c=>c.classList.remove('selected'));
+      card.classList.add('selected');
+      state.selectedAngle=angles[i];
+      document.getElementById('btn-to-station2').disabled=false;
+    });
+    c.appendChild(card);
+  });
+}
+
+document.getElementById('btn-find-niches').addEventListener('click',findNiches);
+document.getElementById('btn-regen-niches').addEventListener('click',findNiches);
+document.getElementById('btn-to-station2').addEventListener('click',()=>goToStation(2));
+
+// ─── STATION 2 ────────────────────────────────────────────
+async function architectProduct() {
+  const notes=document.getElementById('arch-notes').value.trim();
+  hideError(2); hideResult(2);
+  setLoading(2,true);
+  document.getElementById('btn-architect').disabled=true;
+  try {
+    const raw = await callClaude(
+      `Create a complete product blueprint.\nProduct concept: ${state.selectedAngle.title}\nFormat: ${state.selectedAngle.type}\nNiche: ${state.niche}\nTarget buyer: ${state.buyer||'general audience'}\nExtra notes: ${notes||'none'}\n\nReturn ONLY this JSON:\n{"title":"Full product title","subtitle":"Descriptive subtitle","hook":"One powerful sentence that makes the buyer feel understood","sections":[{"num":"01","heading":"Section heading","summary":"What this covers and key takeaway"}],"deliverable":"Exact description of what buyer gets"}`,
+      `You are a professional digital product architect. Return ONLY valid JSON, no markdown.`
+    );
+    const parsed=safeJSON(raw);
+    state.outline=parsed;
+    renderOutline(parsed);
+    showResult(2);
+  } catch(e){ showError(2,e.message); }
+  finally{ setLoading(2,false); document.getElementById('btn-architect').disabled=false; }
+}
+
+function renderOutline(o) {
+  document.getElementById('outline-box').innerHTML=`
+    <div class="outline-product-title">${o.title}</div>
+    <div class="outline-subtitle">${o.subtitle}</div>
+    <ul class="outline-chapters">${o.sections.map(s=>`<li><span class="ch-num">${s.num}</span><span><strong style="color:var(--cream);font-weight:400;">${s.heading}</strong><br><span style="font-size:0.85rem;color:var(--text-muted);">${s.summary}</span></span></li>`).join('')}</ul>
+    <div class="outline-hook">"${o.hook}"</div>
+    <div style="margin-top:16px;font-size:0.82rem;color:var(--text-dim);font-style:italic;">Deliverable: ${o.deliverable}</div>`;
+}
+
+document.getElementById('btn-architect').addEventListener('click',architectProduct);
+document.getElementById('btn-regen-arch').addEventListener('click',architectProduct);
+document.getElementById('btn-back-1').addEventListener('click',()=>goToStation(1));
+document.getElementById('btn-to-station3').addEventListener('click',()=>goToStation(3));
+
+// ─── STATION 3 ────────────────────────────────────────────
+async function generateContent() {
+  const tone=document.getElementById('tone-notes').value.trim();
+  hideError(3); hideResult(3);
+  setLoading(3,true);
+  document.getElementById('btn-generate-content').disabled=true;
+  try {
+    const sectionList=state.outline.sections.map(s=>`${s.num}. ${s.heading} — ${s.summary}`).join('\n');
+    const raw = await callClaude(
+      `Write complete content for this digital product.\nProduct: ${state.outline.title}\nSubtitle: ${state.outline.subtitle}\nFormat: ${state.selectedAngle.type}\nTarget buyer: ${state.buyer||'general audience'}\nTone: ${tone||'professional, practical, warm'}\n\nSections:\n${sectionList}\n\nWrite full content: compelling introduction, all sections with headings and key takeaways, strong closing with CTA. Make it feel premium. End each section with "Key Takeaway:" line.`,
+      `You are an expert digital product writer. Write high-value, practical, premium-feeling content.`
+    );
+    state.content=raw;
+    document.getElementById('content-body').textContent=raw;
+    showResult(3);
+  } catch(e){ showError(3,e.message); }
+  finally{ setLoading(3,false); document.getElementById('btn-generate-content').disabled=false; }
+}
+
+document.getElementById('btn-generate-content').addEventListener('click',generateContent);
+document.getElementById('btn-regen-content').addEventListener('click',generateContent);
+document.getElementById('btn-back-2').addEventListener('click',()=>goToStation(2));
+document.getElementById('btn-to-station4').addEventListener('click',()=>goToStation(4));
+document.getElementById('copy-content').addEventListener('click',()=>navigator.clipboard.writeText(state.content).then(()=>showToast('Content copied ✦')));
+
+// ─── STATION 4 ────────────────────────────────────────────
+async function generateListing() {
+  const notes=document.getElementById('listing-notes').value.trim();
+  hideError(4); hideResult(4);
+  setLoading(4,true);
+  document.getElementById('btn-gen-listing').disabled=true;
+  try {
+    const raw = await callClaude(
+      `Create a complete SEO-optimized Etsy listing.\nProduct: ${state.outline.title}\nSubtitle: ${state.outline.subtitle}\nFormat: ${state.selectedAngle.type}\nNiche: ${state.niche}\nTarget buyer: ${state.buyer||'general audience'}\nPrice range: ${state.selectedAngle.priceRange}\nDeliverable: ${state.outline.deliverable}\nNotes: ${notes||'none'}\n\nReturn ONLY this JSON:\n{"etsyTitle":"SEO title max 140 chars","price":"$X.XX","description":"Full 400-600 word Etsy description with hook, what it is, who it's for, what's inside, CTA","tags":["tag1","tag2","tag3","tag4","tag5","tag6","tag7","tag8","tag9","tag10","tag11","tag12","tag13"],"leadHook":"One-line Pinterest/Instagram hook"}`,
+      `You are an Etsy SEO specialist. Return ONLY valid JSON, no markdown.`
+    );
+    const parsed=safeJSON(raw);
+    state.listing=parsed;
+    renderListing(parsed);
+    showResult(4);
+  } catch(e){ showError(4,e.message); }
+  finally{ setLoading(4,false); document.getElementById('btn-gen-listing').disabled=false; }
+}
+
+function renderListing(l) {
+  document.getElementById('listing-grid').innerHTML=`
+    <div class="listing-block full"><div class="listing-block-label">Etsy Listing Title</div><div class="listing-title-value">${l.etsyTitle}</div></div>
+    <div class="listing-block"><div class="listing-block-label">Recommended Price</div><div class="price-value">${l.price}</div></div>
+    <div class="listing-block"><div class="listing-block-label">Social Hook</div><div class="listing-block-value" style="font-style:italic;">"${l.leadHook}"</div></div>
+    <div class="listing-block full"><div class="listing-block-label">Listing Description</div><div class="listing-block-value">${l.description}</div></div>
+    <div class="listing-block full"><div class="listing-block-label">Etsy Tags (13)</div><div class="tags-list">${l.tags.map(t=>`<span class="tag-pill">${t}</span>`).join('')}</div></div>`;
+}
+
+document.getElementById('btn-gen-listing').addEventListener('click',generateListing);
+document.getElementById('btn-back-3').addEventListener('click',()=>goToStation(3));
+document.getElementById('btn-to-station5').addEventListener('click',()=>goToStation(5));
+document.getElementById('btn-regen-listing').addEventListener('click',generateListing);
+document.getElementById('btn-copy-all-listing').addEventListener('click',()=>{
+  if(!state.listing) return;
+  const l=state.listing;
+  navigator.clipboard.writeText(`ETSY TITLE:\n${l.etsyTitle}\n\nPRICE: ${l.price}\n\nDESCRIPTION:\n${l.description}\n\nTAGS:\n${l.tags.join(', ')}\n\nSOCIAL HOOK:\n"${l.leadHook}"`).then(()=>showToast('Listing copied ✦'));
+});
+
+// ─── STATION 5 — PDF EXPORT ───────────────────────────────
+function selectPDFStyle(el, style) {
+  document.querySelectorAll('.pdf-option-card').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected');
+  state.pdfStyle = style;
+}
+
+function populatePDFPreview() {
+  if(!state.outline) return;
+  document.getElementById('prev-title').textContent = state.outline.title || '—';
+  document.getElementById('prev-format').textContent = state.selectedAngle?.type || '—';
+  document.getElementById('prev-sections').textContent = state.outline.sections?.length || '—';
+  const wordCount = state.content.split(/\s+/).length;
+  const estPages = Math.max(8, Math.round(wordCount / 250));
+  document.getElementById('prev-pages').textContent = `~${estPages} pages`;
+}
+
+document.getElementById('btn-back-4').addEventListener('click',()=>goToStation(4));
+
+document.getElementById('btn-download-pdf').addEventListener('click', generatePDF);
+
+function generatePDF() {
+  if(!state.outline || !state.content) { showToast('Complete all stations first'); return; }
+
+  const btn = document.getElementById('btn-download-pdf');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="download-icon">⏳</span> Generating…';
+
+  try {
+    const isDark = state.pdfStyle === 'dark';
+    const author = document.getElementById('author-name').value.trim() || 'Victory Hour Multimedia';
+
+    // Colors
+    const BG       = isDark ? [6, 9, 15]       : [255, 255, 255];
+    const NAVY_RGB  = isDark ? [11, 29, 58]      : [240, 245, 255];
+    const GOLD_RGB  = [201, 168, 76];
+    const BODY_RGB  = isDark ? [220, 205, 175]   : [30, 30, 40];
+    const MUTED_RGB = isDark ? [140, 125, 100]   : [110, 100, 80];
+    const HEAD_RGB  = isDark ? [240, 230, 204]   : [20, 20, 35];
+
+    const doc = new jsPDF({ orientation:'portrait', unit:'pt', format:'a4' });
+    const W = doc.internal.pageSize.getWidth();
+    const H = doc.internal.pageSize.getHeight();
+    const ML = 56, MR = 56, CT = 56;
+    const TW = W - ML - MR;
+
+    let pageNum = 0;
+
+    function newPage() {
+      if(pageNum > 0) doc.addPage();
+      pageNum++;
+      // Background
+      doc.setFillColor(...BG);
+      doc.rect(0, 0, W, H, 'F');
+      // Gold top bar
+      doc.setFillColor(...GOLD_RGB);
+      doc.rect(0, 0, W, 3, 'F');
+      // Footer
+      doc.setFillColor(...NAVY_RGB);
+      doc.rect(0, H-32, W, 32, 'F');
+      doc.setFontSize(7);
+      doc.setTextColor(...MUTED_RGB);
+      doc.text('VICTORY HOUR MULTIMEDIA INC.  ·  victoryhourmedia.com', ML, H-12);
+      doc.text(`Page ${pageNum}`, W-ML, H-12, {align:'right'});
+      return CT;
+    }
+
+    // ── Cover Page ──────────────────────────────────────
+    let y = newPage();
+
+    // Big gold accent bar left
+    doc.setFillColor(...GOLD_RGB);
+    doc.rect(ML-20, 100, 4, 340, 'F');
+
+    // Format badge
+    doc.setFillColor(...NAVY_RGB);
+    doc.roundedRect(ML, 110, 120, 22, 3, 3, 'F');
+    doc.setFontSize(7);
+    doc.setTextColor(...GOLD_RGB);
+    doc.text((state.selectedAngle?.type||'GUIDE').toUpperCase(), ML+10, 125);
+
+    // Title
+    y = 155;
+    doc.setFontSize(28);
+    doc.setTextColor(...HEAD_RGB);
+    const titleLines = doc.splitTextToSize(state.outline.title, TW-10);
+    titleLines.forEach(line => {
+      doc.text(line, ML, y);
+      y += 36;
+    });
+
+    // Gold divider
+    y += 8;
+    doc.setDrawColor(...GOLD_RGB);
+    doc.setLineWidth(1.5);
+    doc.line(ML, y, ML+80, y);
+    y += 20;
+
+    // Subtitle
+    doc.setFontSize(13);
+    doc.setTextColor(...MUTED_RGB);
+    const subLines = doc.splitTextToSize(state.outline.subtitle, TW-10);
+    subLines.forEach(line => { doc.text(line, ML, y); y += 18; });
+    y += 20;
+
+    // Hook quote box
+    doc.setFillColor(...NAVY_RGB);
+    doc.roundedRect(ML, y, TW, 60, 4, 4, 'F');
+    doc.setDrawColor(...GOLD_RGB);
+    doc.setLineWidth(2);
+    doc.line(ML, y, ML, y+60);
+    doc.setFontSize(11);
+    doc.setTextColor(...BODY_RGB);
+    const hookLines = doc.splitTextToSize(`"${state.outline.hook}"`, TW-24);
+    let hy = y+16;
+    hookLines.forEach(l => { doc.text(l, ML+14, hy); hy+=15; });
+    y += 78;
+
+    // Author
+    doc.setFontSize(9);
+    doc.setTextColor(...MUTED_RGB);
+    doc.text(`By ${author}`, ML, H-50);
+
+    // Deliverable
+    doc.setFontSize(9);
+    doc.setTextColor(...GOLD_RGB);
+    doc.text(state.outline.deliverable || '', ML, H-65);
+
+    // ── Table of Contents ──────────────────────────────
+    y = newPage();
+    doc.setFontSize(18);
+    doc.setTextColor(...GOLD_RGB);
+    doc.text('TABLE OF CONTENTS', ML, y); y+=8;
+    doc.setDrawColor(...GOLD_RGB);
+    doc.setLineWidth(0.5);
+    doc.line(ML, y, ML+180, y); y+=28;
+
+    state.outline.sections.forEach((sec, i) => {
+      doc.setFillColor(...NAVY_RGB);
+      doc.roundedRect(ML, y-12, TW, 28, 2, 2, 'F');
+      doc.setFontSize(9);
+      doc.setTextColor(...GOLD_RGB);
+      doc.text(sec.num, ML+10, y+4);
+      doc.setFontSize(11);
+      doc.setTextColor(...HEAD_RGB);
+      doc.text(sec.heading, ML+36, y+4);
+      doc.setFontSize(8);
+      doc.setTextColor(...MUTED_RGB);
+      const sumLines = doc.splitTextToSize(sec.summary, TW-80);
+      doc.text(sumLines[0]||'', ML+36, y+16);
+      y += 36;
+      if(y > H-80) { y = newPage(); }
+    });
+
+    // ── Content Pages ─────────────────────────────────
+    // Parse content into lines and render
+    const rawLines = state.content.split('\n');
+    y = newPage();
+
+    rawLines.forEach(line => {
+      const trimmed = line.trim();
+      if(!trimmed) { y += 10; return; }
+
+      // Detect heading patterns
+      const isH1 = /^#{1,2}\s/.test(trimmed) || /^[A-Z][A-Z\s]{8,}$/.test(trimmed);
+      const isH2 = /^#{3}\s/.test(trimmed) || /^\d+\.\s[A-Z]/.test(trimmed);
+      const isKeyTakeaway = /^key takeaway/i.test(trimmed);
+      const isBullet = /^[-•*]\s/.test(trimmed) || /^\d+\.\s/.test(trimmed);
+
+      if(y > H - 80) { y = newPage(); }
+
+      if(isKeyTakeaway) {
+        y += 6;
+        doc.setFillColor(...NAVY_RGB);
+        const ktLines = doc.splitTextToSize(trimmed, TW-20);
+        const ktH = ktLines.length * 14 + 16;
+        doc.roundedRect(ML, y-10, TW, ktH, 3, 3, 'F');
+        doc.setDrawColor(...GOLD_RGB);
+        doc.setLineWidth(2);
+        doc.line(ML, y-10, ML, y-10+ktH);
+        doc.setFontSize(9);
+        doc.setTextColor(...GOLD_RGB);
+        doc.text('KEY TAKEAWAY', ML+12, y+2);
+        doc.setFontSize(10);
+        doc.setTextColor(...BODY_RGB);
+        ktLines.forEach((l,i) => { doc.text(l, ML+12, y+14+(i*13)); });
+        y += ktH + 14;
+      } else if(isH1) {
+        y += 14;
+        const clean = trimmed.replace(/^#+\s*/,'');
+        doc.setFontSize(17);
+        doc.setTextColor(...GOLD_RGB);
+        const h1Lines = doc.splitTextToSize(clean, TW);
+        h1Lines.forEach(l => { doc.text(l, ML, y); y+=22; });
+        doc.setDrawColor(...GOLD_RGB);
+        doc.setLineWidth(0.5);
+        doc.line(ML, y, ML+60, y);
+        y+=16;
+      } else if(isH2) {
+        y += 10;
+        const clean = trimmed.replace(/^#+\s*/,'');
+        doc.setFontSize(13);
+        doc.setTextColor(...HEAD_RGB);
+        const h2Lines = doc.splitTextToSize(clean, TW);
+        h2Lines.forEach(l => { doc.text(l, ML, y); y+=18; });
+        y+=4;
+      } else if(isBullet) {
+        const clean = trimmed.replace(/^[-•*\d.]\s*/,'');
+        doc.setFillColor(...GOLD_RGB);
+        doc.circle(ML+4, y-3, 2, 'F');
+        doc.setFontSize(10);
+        doc.setTextColor(...BODY_RGB);
+        const bLines = doc.splitTextToSize(clean, TW-16);
+        bLines.forEach((l,i) => { doc.text(l, ML+14, y+(i*14)); });
+        y += bLines.length*14+4;
+      } else {
+        doc.setFontSize(10.5);
+        doc.setTextColor(...BODY_RGB);
+        const pLines = doc.splitTextToSize(trimmed, TW);
+        pLines.forEach(l => {
+          if(y > H-80) { y = newPage(); }
+          doc.text(l, ML, y);
+          y+=15;
+        });
+        y+=4;
+      }
+    });
+
+    // ── Back Cover ────────────────────────────────────
+    y = newPage();
+    doc.setFillColor(...NAVY_RGB);
+    doc.rect(0, 0, W, H, 'F');
+    doc.setFillColor(...GOLD_RGB);
+    doc.rect(0, 0, W, 4, 'F');
+    doc.rect(0, H-4, W, 4, 'F');
+
+    doc.setFontSize(22);
+    doc.setTextColor(...GOLD_RGB);
+    doc.text('VICTORY HOUR', W/2, H/2-40, {align:'center'});
+    doc.setFontSize(9);
+    doc.setTextColor(...MUTED_RGB);
+    doc.text('MULTIMEDIA INC.', W/2, H/2-22, {align:'center'});
+    doc.setFontSize(10);
+    doc.setTextColor(...BODY_RGB);
+    doc.text('Clarity. Strategy. Action.', W/2, H/2, {align:'center'});
+    doc.setFontSize(8);
+    doc.setTextColor(...MUTED_RGB);
+    doc.text('victoryhourmedia.com  ·  info@victoryhourmedia.com', W/2, H/2+20, {align:'center'});
+    doc.setFontSize(8);
+    doc.setTextColor(...GOLD_RGB);
+    doc.text('10% of proceeds donated to fight world hunger.', W/2, H/2+40, {align:'center'});
+
+    // Save
+    const filename = (state.outline.title||'product').replace(/[^a-z0-9]/gi,'_').toLowerCase()+'.pdf';
+    doc.save(filename);
+
+    document.getElementById('success-banner').classList.add('show');
+    showToast('PDF downloaded ✦');
+
+  } catch(e) {
+    showError(5, 'PDF generation failed: ' + e.message);
+    console.error(e);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<span class="download-icon">⬇</span> Download PDF';
+  }
+}
+
+// ─── Start Over ───────────────────────────────────────────
+document.getElementById('btn-start-over').addEventListener('click',()=>{
+  Object.assign(state,{niche:'',buyer:'',selectedAngle:null,angles:[],outline:null,content:'',listing:null,pdfStyle:'dark'});
+  ['niche-input','buyer-input','arch-notes','tone-notes','listing-notes','author-name'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  [1,2,3,4,5].forEach(n=>{hideResult(n);hideError(n);});
+  document.getElementById('btn-to-station2').disabled=true;
+  document.getElementById('success-banner').classList.remove('show');
+  goToStation(1);
+});
+</script>
+</body>
+</html>
